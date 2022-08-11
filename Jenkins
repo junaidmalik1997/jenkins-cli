@@ -1,15 +1,12 @@
-#!/bin/bash
- 
-JENKINS_URL=$1
-NODE_NAME=$2
-NODE_HOME='/home/build/jenkins-node'
+JENKINS_URL=http://54.215.56.177:8080/
+NODE_NAME=jenkins-cli
+NODE_HOME='/abc/jenkins'
 EXECUTORS=1
 SSH_PORT=22
-CRED_ID=$3
-LABELS=build
+LABELS=xyz
 USERID=${USER}
  
-cat <<EOF | java -jar ~/bin/jenkins-cli.jar -s $1 create-node $2
+cat <<EOF | java -jar /jenkins-cli.jar -s $JENKINS_URL create-node $NODE_NAME
 <slave>
   <name>${NODE_NAME}</name>
   <description></description>
