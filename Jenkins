@@ -1,26 +1,42 @@
-JENKINS_URL=http://54.215.56.177:8080/
-NODE_NAME=jenkins-cli
-NODE_HOME='/abc/jenkins'
-EXECUTORS=1
-SSH_PORT=22
-LABELS=xyz
-USERID=${USER}
- 
-cat <<EOF | java -jar /jenkins-cli.jar -s $JENKINS_URL create-node $NODE_NAME
+#!/bin/bash
+sudo yum update -y
+sudo amazon-linux-extras install java-openjdk11
+set -xe
+
+MASTER_URL=http://13.57.34.87:8080
+MASTER_USERNAME=junaid
+MASTER_PASSWORD=123456
+NODE_NAME=jenkins-$(hostname -i)
+NUM_EXECUTORS=1
+pwd
+# Download CLI-jar file from the master
+sudo curl ${MASTER_URL}/jnlpJars/jenkins-cli.jar -o /home/ec2-user/jenkins-cli.jar
+
+# Create node according to parameters passed in
+cat <<EOF | java -jar /home/ec2-user/jenkins-cli.jar -auth "${MASTER_USERNAME}:${MASTER_PASSWORD}" -s "${MASTER_URL}" create-node "${NODE_NAME}" |true
 <slave>
   <name>${NODE_NAME}</name>
   <description></description>
-  <remoteFS>${NODE_HOME}</remoteFS>
-  <numExecutors>${EXECUTORS}</numExecutors>
+  <remoteFS>/home/jenkins/agent</remoteFS>
+  <numExecutors>${NUM_EXECUTORS}</numExecutors>
   <mode>NORMAL</mode>
-  <retentionStrategy class="hudson.slaves.RetentionStrategy$Always"/>
-  <launcher class="hudson.plugins.sshslaves.SSHLauncher" plugin="ssh-slaves@1.5">
-    <host>${NODE_NAME}</host>
-    <port>${SSH_PORT}</port>
-    <credentialsId>${CRED_ID}</credentialsId>
+  <retentionStrategy class="hudson.slaves.RetentionStrategy\$Always"/>
+  <launcher class="hudson.slaves.JNLPLauncher">
+    <workDirSettings>
+      <disabled>false</disabled>
+      <internalDir>remoting</internalDir>
+      <failIfWorkDirIsMissing>false</failIfWorkDirIsMissing>
+    </workDirSettings>
   </launcher>
-  <label>${LABELS}</label>
+  <label></label>
   <nodeProperties/>
-  <userId>${USERID}</userId>
+  <userId>${USER}</userId>
 </slave>
 EOF
+# Creating the node will fail if it already exists, so |true to suppress the
+# error. This probably should check if the node exists first but it should be
+# possible to see any startup errors if the node doesn't attach as expected.
+pwd
+# Run jnlp launcher
+sudo curl http://13.57.34.87:8080/jnlpJars/agent.jar -o /home/ec2-user/agent.jar
+sudo java -jar /home/ec2-user/agent.jar -jnlpUrl ${MASTER_URL}/computer/${NODE_NAME}/jenkins-agent.jnlp -workDir "/home/jenkins/agent"
